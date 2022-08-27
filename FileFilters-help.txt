@@ -1,0 +1,125 @@
+Riadky zo vstupného súboru alebo súborov sa prepisujú do výstupného súboru
+len ak je zapnutý prepis, ktorý sa zapína filtrami „-start:“ a vypína
+filtrami „-end:“, pozastavuje filtrami „-pause:“, obnovuje filtrami „-resume:“
+pričom obsah prepisovaných riadkov môže byť filtrovaný dodatočnými filtrami
+„-filter:“.
+
+Pri filtroch, v hlavičke a v päte sa dajú použiť tieto premenné:
+	#eq0# – je nahradená vzorcom definovaným cez -eq0:«vzorec»
+		(…)
+	#eq9# – je nahradená vzorcom definovaným cez -eq9:«vzorec»
+
+	#line# – je nahradená číslom zapisovaného riadka.
+		Pri tejto premennej sa dajú použiť aj tieto varianty:
+			#line-n# – zapíše n-té predchádzajúce číslo riadka
+			#line+n# – zapíše n-té nasledujúce číslo riadka
+			kde n smie byť v rozsahu 1 – 9.
+	#newline# – vloží nový riadok (a zvýši počítadlo riadkov).
+
+Prázdne riadky sú ignorované.
+
+Parametre:
+	-in:«vstup» – súbor alebo priečinok.
+		(…)
+		Je povinný výskyt aspoň jedného parametra tohto typu.
+		• Ak je «vstup» súbor, tak sa jeho obsah číta priamo.
+		• Ak je «vstup» priečinok, tak sa budú (z historických dôvodov) čítať
+		  súbory zo stromu:
+			«vstup»/01/catalina.out
+				(…)
+			«vstup»/08/catalina.out
+
+	-out:«výstup» – výstupný súbor
+		• Ak bol posledný «vstup» v zozname súbor, tak sa filtrovaný obsah
+		  bude zapisovať do súboru:
+			«cesta k vstupu»/«výstup»
+		  kde «cesta k vstupu» je absolútna cesta k dotknutému súboru «vstup».
+		• Ak bol posledný «vstup» v zozname priečinok, tak sa filtrovaný obsah
+		  bude zapisovať do súboru:
+			«vstup»/«výstup»
+		  pričom sa vždy pri prvom zapnutí prepisu do súboru automaticky
+		  zapíše riadok v tvare: "\ncatalina-0#\n", kde # je poradové číslo
+		  od 1 do 8 (podľa stromu vstupu; pozri hore) a \n je nový riadok.
+		• Ak «výstup» nie je zadaný, tak je zvolený predvolený názov:
+			catalina-filtered.out
+		  inak sa postupuje podľa pravidiel vyššie.
+
+	-start:«filter začiatku 1»
+		(…)
+	-start:«filter začiatku n»
+		Je povinný výskyt aspoň jedného parametra tohto typu. Ak nie je
+		zapnutý prepis a aktuálny riadok vyhovie všetkým kritériám, tak
+		sa prepis zapne.
+
+	-end:«filter konca 1»
+		(…)
+	-end:«filter konca n»
+		Ak je zapnutý prepis a aktuálny riadok vyhovie všetkým kritériám,
+		tak sa prepis vypne, pričom tento riadok sa ešte spracuje.
+
+		(Poznámka: Proces je naprogramovaný tak, že ten istý riadok môže
+		zároveň dodatočne vyhovieť štartovacím kritériám, takže pozor na
+		stanovenie koncových a začiatočných filtrov.)
+
+	-pause:«filter prerušenia 1»
+		(…)
+	-pause:«filter prerušenia n»
+		Ak je zapnutý prepis, ktorý práve nebol zastavený kritériami filtra
+		konca a aktuálny riadok vyhovie aspoň jednému kritéru filtrov
+		prerušenia, tak sa prepis vypne (pričom, opäť, tento riadok sa ešte
+		spracuje).
+
+	-resume:«filter obnovenia 1»
+		(…)
+	-resume:«filter obnovenia n»
+		Ak práve nie je zapnutý prepis (a ak aktuálny riadok momentálne
+		nevyhovel štartovacím kritériám), tak ak aktuálny riadok vyhovie aspoň
+		jednému kritériu filtrov obnovenia, tak sa prepis zapne.
+
+	Poznámka: V istom zmysle sa filtre štartu dajú považovať za štartovaciu
+		podmienku zloženú operáciami logického súčinu a filtre obnovenia za
+		štartovaciu podmienku zloženú operáciami logického súčtu. Podobne
+		filtre ukončenia sú zložené operáciou logického súčinu a filtre
+		prerušenia logického súčtu.
+
+	-filter:«regex 1»
+	«replace 1»
+		(…)
+	-filter:«regex n»
+	«replace n»
+		Dvojice parametrov, ktoré filtrujú riadky, ak je zapnutý prepis.
+
+		(Poznámka: Ak nie je nájdená dvojica – t. j. ak je «regex n» posledným
+		parametrom, za ktorým už nenasleduje párujúci parameter «replace n»,
+		tak je tento filter ignorovaný.)
+
+		Pri spracovaní sa postupuje takto: Ak prečítaný vstupný riadok vyhovie
+		vzoru «regex #», tak je výstupný riadok nahradený podľa šablóny filtra
+		«replace #».
+
+	-break – Nastaví príznak prerušenia naposledy definovanému filtru. Pri
+		zhode vstupného riadka s týmto filtrom sa reťaz filtrovania zastaví.
+
+	-eq0:«vzorec»
+		(…)
+	-eq9:«vzorec»
+		Vzorce, ktoré môžu byť použité vo filtroch, hlavičke a päte. (Pozri
+		hore: „Pri filtroch, v hlavičke…“) Sú to v podstate ľubovoľné reťazce,
+		ktoré sa budú vyskytovať vo výstupe. Môže ísť napríklad o vzorce
+		Excelu, ktoré vie Excel pri vkladaní automaticky rozpoznať, ak sa
+		obsah bunky vkladaného textu začína symbolom rovná sa.
+
+	-head:«hlavička» – hlavička výstupného súboru.
+
+	-foot:«päta» – päta výstupného súboru.
+
+	-verboseFilters – zapne podrobnejšie reporty o použití filtrov.
+	-silenceFilters – úplne umlčí reporty o použití filtrov.
+
+	@súbor
+		Parameter v tomto tvare je považovaný za názov súboru „súbor.“ Na
+		pozícii výskytu tohto parametra sa vložia parametere zo súboru „súbor,“
+		v ktorom každý riadok zodpovedá jednému parameteru.
+
+Poznámka: Parametre, ktoré sa začínajú znakom bodkočiarky sú ignorované bez
+chybového hlásenia. (Čo sa dá využiť na „komentovanie“ parametrov.)
