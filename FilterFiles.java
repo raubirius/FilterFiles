@@ -45,20 +45,6 @@ public class FilterFiles extends GRobot
 	}
 
 
-	private class Filter
-	{
-		Pattern p;
-		String m;	// (replacement pattern after match –
-					// maska náhrady po zhode filtra)
-		boolean breakIt = false;
-
-		Filter(String p, String m)
-		{
-			this.p = Pattern.compile(p);
-			this.m = m;
-		}
-	}
-
 	private String filterPattern = null;
 	private final Zoznam<String> sources = new Zoznam<>();
 	private String outFile = "catalina-filtered.out";
@@ -66,7 +52,7 @@ public class FilterFiles extends GRobot
 	private final Zoznam<Pattern> end = new Zoznam<>();
 	private final Zoznam<Pattern> pause = new Zoznam<>();
 	private final Zoznam<Pattern> resume = new Zoznam<>();
-	private final Zoznam<Filter> filtre = new Zoznam<>();
+	private final Zoznam<Filtre.Filter> filtre = new Zoznam<>();
 	private String[] eq = {null, null, null, null, null,
 		null, null, null, null, null};
 	private String head = null, foot = null;
@@ -112,7 +98,7 @@ public class FilterFiles extends GRobot
 	{
 		if (null != filterPattern)
 		{
-			filtre.pridaj(new Filter(filterPattern, parameter));
+			filtre.pridaj(new Filtre.Filter(filterPattern, parameter));
 			filterPattern = null;
 		}
 		else if (parameter.startsWith(";")) { /* ignoruj */ }
@@ -150,8 +136,8 @@ public class FilterFiles extends GRobot
 				out("invalid break", "neplatný break");
 			else
 			{
-				Filter f = filtre.posledný();
-				f.breakIt = true;
+				Filtre.Filter f = filtre.posledný();
+				f.zastav = true;
 			}
 		}
 		else if (parameter.startsWith("-eq") && parameter.length() >= 5 &&
@@ -166,7 +152,8 @@ public class FilterFiles extends GRobot
 			{
 				if (null != eq[num])
 					out("warning: eq" + num + " was redefined",
-						S("varovanie: rovnica eq" + num, " bola predefinovaná"));
+						S("varovanie: rovnica eq" + num,
+							" bola predefinovaná"));
 				eq[num] = parameter.substring(5);
 			}
 		}
@@ -292,10 +279,10 @@ public class FilterFiles extends GRobot
 		for (Pattern p : resume)
 			out("resume if: " + p.pattern(), "obnov ak: " + p.pattern());
 
-		for (Filter f : filtre)
+		for (Filtre.Filter f : filtre)
 		{
-			out("filter: " + f.p.pattern(), "filter: " + f.p.pattern());
-			out("  replace: " + f.m, "  náhrada: " + f.m);
+			out("filter: " + f.vzor.pattern(), "filter: " + f.vzor.pattern());
+			out("  replace: " + f.nahradenie, "  náhrada: " + f.nahradenie);
 		}
 
 		for (int i = 0; i < 10; ++i)
@@ -318,7 +305,6 @@ public class FilterFiles extends GRobot
 		lineOut = 1;
 
 		výstup.zapíšBOM();
-		// výstup.zapíšReťazec("\uFEFF"); // BOM
 
 		if (null != head && !head.isEmpty())
 		{
@@ -396,7 +382,6 @@ public class FilterFiles extends GRobot
 			{
 				boolean vypni = !end.isEmpty();
 				for (Pattern p : end)
-					// if (!p.matcher(prečítané).matches())
 					if (!p.matcher(prečítané).find())
 					{
 						vypni = false;
@@ -413,7 +398,6 @@ public class FilterFiles extends GRobot
 				else
 				{
 					for (Pattern p : pause)
-						// if (p.matcher(prečítané).matches())
 						if (p.matcher(prečítané).find())
 						{
 							vypni = true;
@@ -434,7 +418,6 @@ public class FilterFiles extends GRobot
 			{
 				boolean zapni = !start.isEmpty();
 				for (Pattern p : start)
-					// if (!p.matcher(prečítané).matches())
 					if (!p.matcher(prečítané).find())
 					{
 						zapni = false;
@@ -458,10 +441,9 @@ public class FilterFiles extends GRobot
 					}
 					zapisuj = true;
 				}
-				else // if (!prvý)
+				else
 				{
 					for (Pattern p : resume)
-						// if (p.matcher(prečítané).matches())
 						if (p.matcher(prečítané).find())
 						{
 							zapni = true;
@@ -495,31 +477,32 @@ public class FilterFiles extends GRobot
 						S("riadok", lineIn, "preskočený"));
 				else
 				{
-					for (Filter f : filtre)
+					for (Filtre.Filter f : filtre)
 					{
-						Matcher m = f.p.matcher(prečítané);
-						// if (m.matches())
-						if (m.find())
+						f.zhoda = f.zhoda(prečítané);
+
+						if (f.zhoda.find())
 						{
-							String nové = replaceVariables(m.replaceAll(f.m));
+							String nové = replaceVariables(
+								f.zhoda.replaceAll(f.nahradenie));
 
 							// (-verboseFilters a -silenceFilters)
 							if (filterReportLevel > 1)
-								out("filter “" + f.p.pattern() +
+								out("filter “" + f.vzor.pattern() +
 									"” applied on " + lineIn + "\n  " +
 									prečítané + "\n  " + nové,
-									S("filter „", f.p.pattern(),
+									S("filter „", f.vzor.pattern(),
 										"“ bol použitý na riadok ", lineIn,
 										riadok, "  ", prečítané, riadok, "  ",
 										nové));
 							else if (filterReportLevel > 0)
-								out("filter “" + f.p.pattern() +
+								out("filter “" + f.vzor.pattern() +
 									"” applied on " + lineIn,
-									S("filter „", f.p.pattern(),
+									S("filter „", f.vzor.pattern(),
 										"“ bol použitý na riadok ", lineIn));
 
 							prečítané = nové;
-							if (f.breakIt) break;
+							if (f.zastav) break;
 						}
 					}
 
@@ -591,7 +574,6 @@ public class FilterFiles extends GRobot
 			t.printStackTrace();
 		} finally {
 			Svet.zobraz();
-			// kresli();
 			spustiČasovač();
 			vykonaťNeskôr(() -> prekresli());
 		}
