@@ -33,7 +33,7 @@ public class FilterFiles extends GRobot
 		out.println();
 		try {
 			Súbor súbor = new Súbor();
-			súbor.otvorNaČítanie("FileFilters-help.txt");
+			súbor.otvorNaČítanie("FileFilters-help-sk.txt");
 			String help;
 			while (null != (help = súbor.čítajRiadok()))
 				out.println(help.replace("\t", "    "));

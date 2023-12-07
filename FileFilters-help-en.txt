@@ -1,0 +1,157 @@
+Lines from the input file or files are only rewritten to the output file if
+rewriting is enabled, which is turned on by the parameters “-start:” and turned
+off by the parameters “-end:”, paused by the parameters “-pause:”, and resumed
+by the parameters “-resume:”. Additionally, the content of the rewritten lines
+can be filtered by extra parameters “-filter:”.
+
+(Note: Historically, the implementation of this utility began as a tool for
+transcribing logs of certain software, which is evident in some of the
+parameters, but later proved useful in various other situations, e.g.,
+transcribing data batches into a format suitable for import into Excel. As the
+utility is intended for repeated use in similar situations, its parameters can
+be “scripted” – see the end of the helper: a parameter in the form of @file.)
+
+In the header (parameter “-head:”) and in the footer (parameter “-foot:”), the
+following variables (strings) can be used:
+	#eq0# – replaced by a pattern defined via -eq0:«pattern»;
+		(… up to …)
+	#eq9# – replaced by a pattern defined via -eq9:«pattern».
+
+	#line# – replaced by the number of the line being written.
+		For this variable (string), the following variants can also be used:
+			#line-n# – writes the nth preceding line number
+			#line+n# – writes the nth following line number
+			where n can be in the range of 1 – 9.
+
+	#newline# – inserts a new line (and increases the line counter).
+
+Attention: Empty lines in the input file are ignored. (They are not transferred
+to the output file.)
+
+The parameters “-start:”, “-end:”, “-pause:”, and “-resume:” can be repeated
+in groups of consecutive parameters of the same type, allowing the creation
+of more complex filtering conditions – details in the description below.
+
+Parameters:
+	-in:«input» – file or folder.
+		(…)
+		At least one occurrence of this type of parameter is mandatory.
+		• If «input» is a file, then its content is read directly.
+		• If «input» is a folder, then files from the tree will be read
+		  (for historical reasons):
+			«input»/01/catalina.out
+				(…)
+			«input»/08/catalina.out
+		  (As mentioned, this has historical background in the implementation
+		  of this utility.)
+
+	-out:«output» – output file
+		• If the last «input» in the list was a file, then the filtered content
+		  will be written to the file:
+			«path to input»/«output»
+		  where «path to input» is the absolute path to the affected file «input».
+		• If the last «input» in the list was a folder, then the filtered
+		  content will be written to the file:
+			«input»/«output»
+		  where each time the rewriting to the file is turned on for the first
+		  time, a line in the form: “\ncatalina-0#\n”, where # is a sequence
+		  number from 1 to 8 (according to the input tree; see above) and \n
+		  is a new line, is automatically written. (This also has historical
+		  background.)
+		• If «output» is not specified, the default name chosen is:
+			catalina-filtered.out
+		  otherwise, the rules above apply. (This also has historical
+		  background.)
+
+	-start:«start filter 1»
+		(…)
+	-start:«start filter n»
+		At least one occurrence of this type of parameter is mandatory.
+		(Otherwise, processing does not start.) If rewriting is not enabled
+		and the current line meets all criteria, then rewriting is turned on.
+
+	-end:«end filter 1»
+		(…)
+	-end:«end filter n»
+		If rewriting is enabled and the current line meets all criteria, then
+		rewriting is turned off, but this line is still processed (copied to
+		the output file).
+
+		(Note: The process is programmed such that the same line can
+		simultaneously meet the starting criteria, so be careful with setting
+		the ending and starting filters.)
+
+	-pause:«pause filter 1»
+		(…)
+	-pause:«pause filter n»
+		If rewriting is enabled, which has not been stopped by end filter
+		criteria, and the current line meets at least one of the pause filter
+		criteria, then rewriting is turned off (again, this line is still
+		processed).
+
+	-resume:«resume filter 1»
+		(…)
+	-resume:«resume filter n»
+		If rewriting is currently not enabled (and if the current line has not
+		met the starting criteria), then if the current line meets at least one
+		of the resume filter criteria, then rewriting is turned on.
+
+	Note: In a sense, the start filters can be considered a starting condition
+	composed of logical AND operations, and the resume filters as a starting
+	condition composed of logical OR operations. Similarly, end filters are
+	composed of logical AND operation and pause filters of logical OR operation.
+
+	-filter:«regex 1»
+	«replace 1»
+		(…)
+	-filter:«regex n»
+	«replace n»
+		Pairs of parameters that filter lines if rewriting is enabled. The
+		«regex i» parameter (where i = 1 to n) is a regular expression that
+		will be searched for in the content of the line, and the «replace i»
+		parameter is a replacement template for this regular expression.
+
+		(Note: If a pair is not found – i.e., if «regex n» is the last
+		parameter, followed by no matching «replace n» parameter, then this
+		filter is ignored.)
+
+		During processing, it works like this: If the read input line meets
+		the pattern «regex #», then the output line is replaced according to
+		the filter template «replace #».
+
+	-break – Sets a break flag for the last defined filter (the pattern
+		«regex i»). The interruption is activated when a part of the input
+		line matches this filter, and the filtering chain for this line stops
+		at this filter – that is, at the ith filter in sequence (with the
+		pattern «regex i»). This only stops the chain of filters used within
+		the content filtering of individual lines. The overall rewriting
+		process is not stopped by this flag.
+
+	-eq0:«pattern»
+		(…)
+	-eq9:«pattern»
+		Patterns that can be used in filters, headers, and footers. (See above:
+		“In the header…”) They are essentially arbitrary strings that will
+		appear in the output. For example, they can be Excel formulas that
+		Excel can automatically recognize when the content of the cell of the
+		inserted text starts with an equals sign.
+
+	-head:«header» – header of the output file. The header is a line that is
+		automatically added at the beginning of the output file.
+
+	-foot:«footer» – footer of the output file. The footer is a line that is
+		automatically added at the end of the output file.
+
+	-verboseFilters – enables more detailed reports about the use of filters.
+	-silenceFilters – completely silences reports about the use of filters.
+
+	@file
+		A parameter in this form is considered the name of the file “file.” At
+		the position of occurrence of this parameter, parameters from the file
+		“file,” in which each line corresponds to one parameter, are inserted.
+		(Such a file can be perceived as a “script” of parameters in a certain
+		sense.)
+
+Note: Parameters that start with a semicolon are ignored without an error
+message. (This can be used for “commenting” parameters, especially when using
+the parameter in the form of @file.)
